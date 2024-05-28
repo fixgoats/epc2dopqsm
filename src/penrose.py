@@ -70,5 +70,5 @@ def filterByRadius(points, cutoff):
 
 
 if __name__ == "__main__":
-    grid1 = filterByRadius(makeSunGrid(13.2 * goldenRatio**4, 4), 76)
+    grid1 = filterByRadius(makeSunGrid(13.2 * goldenRatio**4, 4), 60)
     print(np.shape(grid1))

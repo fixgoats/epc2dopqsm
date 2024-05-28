@@ -1,0 +1,7 @@
+env/
+data/*
+.rope*
+.ruff*
+*.pdf
+*.pyc
+*__pycache__*

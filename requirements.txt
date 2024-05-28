@@ -1,0 +1,5 @@
+numpy==1.26.*
+torch==2.3.*
+scipy==1.13.*
+matplotlib==3.9.*
+numba==0.59.*

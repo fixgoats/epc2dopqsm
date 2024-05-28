@@ -31,13 +31,11 @@ a = f"""
 import math
 import json
 import os
-import shutil
 import time
 from argparse import ArgumentParser
 from pathlib import Path
 from time import gmtime, strftime
 
-import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torch.fft as tfft
@@ -46,7 +44,9 @@ from src.common import smoothnoise, tgauss
 from src.penrose import filterByRadius, makeSunGrid
 
 parser = ArgumentParser()
-parser.addArgument("--
+parser.add_argument("--initial-condition", required=False)
+parser.add_argument("--save-initial-condition", required=False)
+args = parser.parse_args()
 
 t1 = time.time()
 now = gmtime()
@@ -131,22 +131,26 @@ def runSim(psi, nR, kTimeEvo, constPart, pump, npolars):
         npolars[i] = torch.sum(tnormSqr(psi).real)
     return psi, nR
 
-
 nR = torch.zeros(({N}, {N}), device='cuda', dtype=torch.cfloat)
 k = torch.arange({-kmax}, {kmax}, {dk}, device='cuda').type(dtype=torch.cfloat)
 k = tfft.fftshift(k)
 kxv, kyv = torch.meshgrid(k, k, indexing='xy')
 kTimeEvo = torch.exp(-0.5j * {hbar * dt / m} * (kxv * kxv + kyv * kyv))
-basedir = os.path.join("graphs", "fig1repro", "data")
+basedir = os.path.join("data", "fig1repro")
 Path(basedir).mkdir(parents=True, exist_ok=True)
-with open(os.path.join(basedir, "parameters.json"), "w") as f:
-    json.dump(params, f)
 x = np.arange({startX}, {endX}, {dx})
 xv, yv = np.meshgrid(x, x)
-psi = torch.from_numpy(smoothnoise(xv, yv)).type(dtype=torch.cfloat).to(device='cuda')
-np.save(os.path.join(basedir, "initialcondition.
 xv = torch.from_numpy(xv).type(dtype=torch.cfloat).to(device='cuda')
 yv = torch.from_numpy(yv).type(dtype=torch.cfloat).to(device='cuda')
+if args.initial_condition is not None:
+    psi = torch.load(args.initial_condition)
+else:
+    psi = torch.from_numpy(smoothnoise(xv, yv)).type(dtype=torch.cfloat).to(device='cuda')
+    if args.save_initial_condition is not None:
+        torch.save(psi, os.path.join(basedir, args.save_initial_condition))
+
+with open(os.path.join(basedir, "parameters.json"), "w") as f:
+    json.dump(params, f)
 nR = torch.zeros(({N}, {N}), device='cuda', dtype=torch.cfloat)
 pump = torch.zeros(({N}, {N}), device='cuda', dtype=torch.cfloat)
 points = filterByRadius(makeSunGrid({radius}, 4), {cutoff})
@@ -162,8 +166,8 @@ npolarsgpu = torch.zeros(({nsteps}), dtype=torch.float, device="cuda")
 psi, nR = runSim(psi, nR, kTimeEvo, constpart, pump, npolarsgpu)
 npolars = npolarsgpu.detach().cpu().numpy()
 np.save(os.path.join(basedir, "npolars"), npolars)
-kpsidata = tnormSqr(tfft.fftshift(tfft.fft2(psi))).real.detach().cpu().numpy()
-rpsidata = tnormSqr(psi).real.detach().cpu().numpy()
+kpsidata = tfft.fftshift(tfft.fft2(psi)).detach().cpu().numpy()
+rpsidata = psi.detach().cpu().numpy()
 extentr = np.array([{startX}, {endX}, {startX}, {endX}])
 extentk = np.array([{-kmax}, {kmax}, {-kmax}, {kmax}])
 np.save(os.path.join(basedir, "psidata"),

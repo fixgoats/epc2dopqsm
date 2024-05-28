@@ -19,7 +19,6 @@ startX = -120
 endX = 120
 dx = (endX - startX) / N
 prerun = 8000
-cutoff = 60
 D = 13.2
 radius = D * goldenRatio**4
 kmax = np.pi / dx
@@ -31,18 +30,22 @@ a = f"""
 import math
 import json
 import os
-import shutil
 import time
+from argparse import ArgumentParser
 from pathlib import Path
 from time import gmtime, strftime
 
-import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torch.fft as tfft
 
-from src.solvers import figBoilerplate, npnormSqr, imshowBoilerplate, smoothnoise, tgauss
+from src.common import smoothnoise, tgauss
 from src.penrose import filterByRadius, makeSunGrid
+
+parser = ArgumentParser()
+parser.add_argument("--initial-conditions", required=False)
+parser.add_argument("--save-initial-conditions", required=False)
+args = parser.parse_args()
 
 t1 = time.time()
 now = gmtime()
@@ -56,7 +59,6 @@ params = {{
     "Gamma": {Gamma},
     "eta": {eta},
     "D": {radius},
-    "cutoff": {cutoff},
     "m": {m},
     "N": {N},
     "pumpStrength": {pumpStrength},
@@ -133,54 +135,53 @@ k = torch.arange({-kmax}, {kmax}, {dk}, device='cuda').type(dtype=torch.cfloat)
 k = tfft.fftshift(k)
 kxv, kyv = torch.meshgrid(k, k, indexing='xy')
 kTimeEvo = torch.exp(-0.5j * {hbar * dt / m} * (kxv * kxv + kyv * kyv))
-basedir = os.path.join("graphs", day, timeofday)
+basedir = os.path.join("data", "fig2repro")
 Path(basedir).mkdir(parents=True, exist_ok=True)
 with open(os.path.join(basedir, "parameters.json"), "w") as f:
     json.dump(params, f)
 x = np.arange({startX}, {endX}, {dx})
 xv, yv = np.meshgrid(x, x)
-# dampingscale = {endX * endX * 3}
-# damping = 0*(np.cosh((xv*xv + yv*yv) / dampingscale) - 1)
-# imshowBoilerplate(
-#         damping.real, "dampingpotential", "x", "y", [{startX}, {endX}, {startX}, {endX}]
-#         )
-# damping = torch.from_numpy(damping).type(dtype=torch.cfloat).to(device='cuda')
 psi = torch.from_numpy(smoothnoise(xv, yv)).type(dtype=torch.cfloat).to(device='cuda')
 xv = torch.from_numpy(xv).type(dtype=torch.cfloat).to(device='cuda')
 yv = torch.from_numpy(yv).type(dtype=torch.cfloat).to(device='cuda')
-nR = torch.zeros(({N}, {N}), device='cuda', dtype=torch.cfloat)
-pump = torch.zeros(({N}, {N}), device='cuda', dtype=torch.cfloat)
-points = filterByRadius(makeSunGrid({radius}, 4), {cutoff})
-for p in points:
-    pump += {pumpStrength} * tgauss(xv - p[0],
-                                    yv - p[1],
-                                    sigmax={sigmax},
-                                    sigmay={sigmay})
-
-constpart = {constV} + {G * eta / Gamma} * pump
-#spectrumgpu = torch.zeros(({prerun}), dtype=torch.cfloat, device="cuda")
-npolarsgpu = torch.zeros(({prerun}), dtype=torch.float, device="cuda")
-psi, nR = runSim(psi, nR, kTimeEvo, constpart, pump, npolarsgpu)
-#spectrumgpu = tfft.fftshift(tfft.ifft(spectrumgpu))
-#spectrumnp = spectrumgpu.detach().cpu().numpy()
-#bleh[:, j] = npnormSqr(spectrumnp) / np.max(npnormSqr(spectrumnp))
-npolars = npolarsgpu.detach().cpu().numpy()
-np.save(os.path.join(basedir, "npolars"), npolars)
-kpsidata = tnormSqr(tfft.fftshift(tfft.fft2(psi))).real.detach().cpu().numpy()
-rpsidata = tnormSqr(psi).real.detach().cpu().numpy()
-extentr = np.array([{startX}, {endX}, {startX}, {endX}])
-extentk = np.array([{-kmax}, {kmax}, {-kmax}, {kmax}])
-np.save(os.path.join(basedir, "psidata"),
-        {{"kpsidata": kpsidata,
-         "rpsidata": rpsidata,
-         "extentr": extentr,
-         "extentk": extentk,
-         }})
+cutoffs = {{"pn46": 46, "pn86": 60, "pn111": 70, "pn151": 80}}
+for key, value in cutoffs.items():
+    if args.initial_conditions is not None:
+        psi = torch.load(f"{{args.initial_conditions}}{{key}}")
+    else:
+        psi = torch.from_numpy(smoothnoise(xv, yv)).type(dtype=torch.cfloat).to(device='cuda')
+        if args.save_initial_conditions is not None:
+            torch.save(psi, os.path.join(basedir, f"{{args.save_initial_conditions}}{{key}}"))
+    nR = torch.zeros(({N}, {N}), device='cuda', dtype=torch.cfloat)
+    pump = torch.zeros(({N}, {N}), device='cuda', dtype=torch.cfloat)
+    
+    points = filterByRadius(makeSunGrid({radius}, 4), value)
+    for p in points:
+        pump += {pumpStrength} * tgauss(xv - p[0],
+                                        yv - p[1],
+                                        sigmax={sigmax},
+                                        sigmay={sigmay})
+    
+    constpart = {constV} + {G * eta / Gamma} * pump
+    npolarsgpu = torch.zeros(({prerun}), dtype=torch.float, device="cuda")
+    psi, nR = runSim(psi, nR, kTimeEvo, constpart, pump, npolarsgpu)
+    npolars = npolarsgpu.detach().cpu().numpy()
+    np.save(os.path.join(basedir, f"npolars{{key}}"), npolars)
+    kpsidata = tnormSqr(tfft.fftshift(tfft.fft2(psi))).real.detach().cpu().numpy()
+    rpsidata = tnormSqr(psi).real.detach().cpu().numpy()
+    extentr = np.array([{startX}, {endX}, {startX}, {endX}])
+    extentk = np.array([{-kmax}, {kmax}, {-kmax}, {kmax}])
+    np.save(os.path.join(basedir, "psidata{{key}}"),
+            {{"kpsidata": kpsidata,
+             "rpsidata": rpsidata,
+             "extentr": extentr,
+             "extentk": extentk,
+             }})
 
 
 t2 = time.time()
 print(f"finished in {{t2 - t1}} seconds")
 """
 
-with open(".run.py", "w") as f:
+with open("fig2script.py", "w") as f:
     f.write(a)
