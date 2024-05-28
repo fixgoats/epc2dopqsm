@@ -3,7 +3,6 @@ import math
 import json
 import os
 import time
-from argparse import ArgumentParser
 from pathlib import Path
 from time import gmtime, strftime
 
@@ -13,11 +12,6 @@ import torch.fft as tfft
 
 from src.common import smoothnoise, tgauss
 from src.penrose import filterByRadius, makeSunGrid
-
-parser = ArgumentParser()
-parser.add_argument("--initial-conditions", required=False)
-parser.add_argument("--save-initial-conditions", required=False)
-args = parser.parse_args()
 
 t1 = time.time()
 now = gmtime()
@@ -118,12 +112,8 @@ xv = torch.from_numpy(xv).type(dtype=torch.cfloat).to(device='cuda')
 yv = torch.from_numpy(yv).type(dtype=torch.cfloat).to(device='cuda')
 cutoffs = {"pn46": 46, "pn86": 60, "pn111": 70, "pn151": 80}
 for key, value in cutoffs.items():
-    if args.initial_conditions is not None:
-        psi = torch.load(f"{args.initial_conditions}{key}")
-    else:
-        psi = torch.from_numpy(smoothnoise(xv, yv)).type(dtype=torch.cfloat).to(device='cuda')
-        if args.save_initial_conditions is not None:
-            torch.save(psi, os.path.join(basedir, f"{args.save_initial_conditions}{key}"))
+    rng = np.random.default_rng(20011204)
+    psi = torch.from_numpy(smoothnoise(xv, yv, rng)).type(dtype=torch.cfloat).to(device='cuda')
     nR = torch.zeros((1024, 1024), device='cuda', dtype=torch.cfloat)
     pump = torch.zeros((1024, 1024), device='cuda', dtype=torch.cfloat)
     
@@ -143,7 +133,7 @@ for key, value in cutoffs.items():
     rpsidata = tnormSqr(psi).real.detach().cpu().numpy()
     extentr = np.array([-120, 120, -120, 120])
     extentk = np.array([-13.40412865531645, 13.40412865531645, -13.40412865531645, 13.40412865531645])
-    np.save(os.path.join(basedir, "psidata{key}"),
+    np.save(os.path.join(basedir, f"psidata{key}"),
             {"kpsidata": kpsidata,
              "rpsidata": rpsidata,
              "extentr": extentr,

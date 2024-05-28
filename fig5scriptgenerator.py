@@ -26,13 +26,13 @@ kmax = np.pi / dx
 dk = 2 * kmax / N
 sigmax = 1.27
 sigmay = 1.27
+seed = 20011204
 
 a = f"""
 import math
 import json
 import os
 import random
-import shutil
 import time
 from pathlib import Path
 from time import gmtime, strftime
@@ -42,7 +42,7 @@ import numpy as np
 import torch
 import torch.fft as tfft
 
-from src.solvers import figBoilerplate, npnormSqr, imshowBoilerplate, smoothnoise, tgauss
+from src.common import smoothnoise, tgauss
 from src.penrose import filterByRadius, makeSunGrid
 
 t1 = time.time()
@@ -134,28 +134,23 @@ k = torch.arange({-kmax}, {kmax}, {dk}, device='cuda').type(dtype=torch.cfloat)
 k = tfft.fftshift(k)
 kxv, kyv = torch.meshgrid(k, k, indexing='xy')
 kTimeEvo = torch.exp(-0.5j * {hbar * dt / m} * (kxv * kxv + kyv * kyv))
-basedir = os.path.join("graphs", "fig5repro", day, timeofday)
+basedir = os.path.join("data", "fig5repro")
 Path(basedir).mkdir(parents=True, exist_ok=True)
 with open(os.path.join(basedir, "parameters.json"), "w") as f:
     json.dump(params, f)
 x = np.arange({startX}, {endX}, {dx})
 xv, yv = np.meshgrid(x, x)
-# dampingscale = {endX * endX * 3}
-# damping = 0*(np.cosh((xv*xv + yv*yv) / dampingscale) - 1)
-# imshowBoilerplate(
-#         damping.real, "dampingpotential", "x", "y", [{startX}, {endX}, {startX}, {endX}]
-#         )
-# damping = torch.from_numpy(damping).type(dtype=torch.cfloat).to(device='cuda')
-psi = torch.from_numpy(smoothnoise(xv, yv)).type(dtype=torch.cfloat).to(device='cuda')
 xv = torch.from_numpy(xv).type(dtype=torch.cfloat).to(device='cuda')
 yv = torch.from_numpy(yv).type(dtype=torch.cfloat).to(device='cuda')
-nR = torch.zeros(({N}, {N}), device='cuda', dtype=torch.cfloat)
 
 Ds = [13.5, 11.1, 10.1, 7.8]
 points = filterByRadius(makeSunGrid({radius}, 4), {cutoff})
+rng = np.random.default_rng({seed})
 
 for x in Ds:
+    psi = torch.from_numpy(smoothnoise(xv, yv, rng)).type(dtype=torch.cfloat).to(device='cuda')
     ps = x / {D} * points
+    nR = torch.zeros(({N}, {N}), device='cuda', dtype=torch.cfloat)
     pump = torch.zeros(({N}, {N}), device='cuda', dtype=torch.cfloat)
     for p in ps:
         pump += {pumpStrength} * tgauss(xv - p[0],
@@ -164,16 +159,12 @@ for x in Ds:
                                         sigmay={sigmay})
 
     constpart = {constV} + {G * eta / Gamma} * pump
-    #spectrumgpu = torch.zeros(({prerun}), dtype=torch.cfloat, device="cuda")
     npolarsgpu = torch.zeros(({prerun}), dtype=torch.float, device="cuda")
     psi, nR = runSim(psi, nR, kTimeEvo, constpart, pump, npolarsgpu)
-    #spectrumgpu = tfft.fftshift(tfft.ifft(spectrumgpu))
-    #spectrumnp = spectrumgpu.detach().cpu().numpy()
-    #bleh[:, j] = npnormSqr(spectrumnp) / np.max(npnormSqr(spectrumnp))
     npolars = npolarsgpu.detach().cpu().numpy()
-    np.save(os.path.join(basedir, "npolars"), npolars)
-    kpsidata = tnormSqr(tfft.fftshift(tfft.fft2(psi))).real.detach().cpu().numpy()
-    rpsidata = tnormSqr(psi).real.detach().cpu().numpy()
+    np.save(os.path.join(basedir, f"npolars{{x}}"), npolars)
+    kpsidata = tfft.fftshift(tfft.fft2(psi)).detach().cpu().numpy()
+    rpsidata = psi.detach().cpu().numpy()
     extentr = np.array([{startX}, {endX}, {startX}, {endX}])
     extentk = np.array([{-kmax}, {kmax}, {-kmax}, {kmax}])
     np.save(os.path.join(basedir, f"psidata{{x}}"),
@@ -188,5 +179,5 @@ t2 = time.time()
 print(f"finished in {{t2 - t1}} seconds")
 """
 
-with open(".run.py", "w") as f:
+with open("fig5script.py", "w") as f:
     f.write(a)

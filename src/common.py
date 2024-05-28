@@ -24,8 +24,9 @@ def tnormSqr(x):
 
 
 # Create a somewhat more realistic initial condition than white noise
-def smoothnoise(xv, yv):
-    rng = np.random.default_rng()
+def smoothnoise(xv, yv, rng=None):
+    if rng is None:
+        rng = np.random.default_rng()
     random = rng.uniform(-1, 1, np.shape(xv)) + 1j * rng.uniform(-1, 1, np.shape(xv))
     krange = np.linspace(-2, 2, num=21)
     kbasex, kbasey = np.meshgrid(krange, krange)

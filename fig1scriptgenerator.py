@@ -26,13 +26,13 @@ kmax = np.pi / dx
 dk = 2 * kmax / N
 sigmax = 1.27
 sigmay = 1.27
+seed = 20011204
 
 a = f"""
 import math
 import json
 import os
 import time
-from argparse import ArgumentParser
 from pathlib import Path
 from time import gmtime, strftime
 
@@ -42,11 +42,6 @@ import torch.fft as tfft
 
 from src.common import smoothnoise, tgauss
 from src.penrose import filterByRadius, makeSunGrid
-
-parser = ArgumentParser()
-parser.add_argument("--initial-condition", required=False)
-parser.add_argument("--save-initial-condition", required=False)
-args = parser.parse_args()
 
 t1 = time.time()
 now = gmtime()
@@ -142,12 +137,8 @@ x = np.arange({startX}, {endX}, {dx})
 xv, yv = np.meshgrid(x, x)
 xv = torch.from_numpy(xv).type(dtype=torch.cfloat).to(device='cuda')
 yv = torch.from_numpy(yv).type(dtype=torch.cfloat).to(device='cuda')
-if args.initial_condition is not None:
-    psi = torch.load(args.initial_condition)
-else:
-    psi = torch.from_numpy(smoothnoise(xv, yv)).type(dtype=torch.cfloat).to(device='cuda')
-    if args.save_initial_condition is not None:
-        torch.save(psi, os.path.join(basedir, args.save_initial_condition))
+rng = np.random.default_rng({seed})
+psi = torch.from_numpy(smoothnoise(xv, yv, rng)).type(dtype=torch.cfloat).to(device='cuda')
 
 with open(os.path.join(basedir, "parameters.json"), "w") as f:
     json.dump(params, f)
