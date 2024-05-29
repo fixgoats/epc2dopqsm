@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -62,4 +63,5 @@ for i, n in enumerate(defects):
 fig.colorbar(ims[0]["r"], cax=cbar_ax1)
 fig.colorbar(ims[0]["k"], cax=cbar_ax2)
 
+Path("graphs").mkdir(parents=True, exist_ok=True)
 fig.savefig(os.path.join("graphs", "fig4.pdf"))

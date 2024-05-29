@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -8,6 +9,7 @@ from src.common import npnormSqr
 from src.penrose import filterByRadius, goldenRatio, makeSunGrid
 
 path = os.path.join("graphs", "fig1.pdf")
+Path("graphs").mkdir(parents=True, exist_ok=True)
 a = np.load(os.path.join("data", "fig1repro", "psidata.npy"), allow_pickle=True).item()
 psir = a["rpsidata"]
 psir /= np.max(psir)

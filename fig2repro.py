@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -53,6 +54,7 @@ for i, s in enumerate(sets):
         ax[1, i].set_yticks([])
 
 
+Path("graphs").mkdir(parents=True, exist_ok=True)
 fig.colorbar(ims["pn46r"], cax=cbar_ax1)
 fig.colorbar(ims["pn46k"], cax=cbar_ax2)
 fig.savefig(os.path.join("graphs", "fig2.pdf"))

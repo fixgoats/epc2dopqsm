@@ -1,6 +1,5 @@
-
-import math
 import json
+import math
 import os
 import time
 from pathlib import Path
@@ -96,31 +95,35 @@ def runSim(psi, nR, kTimeEvo, constPart, pump, npolars):
         npolars[i] = torch.sum(tnormSqr(psi).real)
     return psi, nR
 
-nR = torch.zeros((1024, 1024), device='cuda', dtype=torch.cfloat)
-k = torch.arange(-13.40412865531645, 13.40412865531645, 0.02617993877991494, device='cuda').type(dtype=torch.cfloat)
+
+nR = torch.zeros((1024, 1024), device="cuda", dtype=torch.cfloat)
+k = torch.arange(
+    -13.40412865531645, 13.40412865531645, 0.02617993877991494, device="cuda"
+).type(dtype=torch.cfloat)
 k = tfft.fftshift(k)
-kxv, kyv = torch.meshgrid(k, k, indexing='xy')
+kxv, kyv = torch.meshgrid(k, k, indexing="xy")
 kTimeEvo = torch.exp(-0.5j * 0.102845618265625 * (kxv * kxv + kyv * kyv))
 basedir = os.path.join("data", "fig1repro")
 Path(basedir).mkdir(parents=True, exist_ok=True)
 x = np.arange(-120, 120, 0.234375)
 xv, yv = np.meshgrid(x, x)
-xv = torch.from_numpy(xv).type(dtype=torch.cfloat).to(device='cuda')
-yv = torch.from_numpy(yv).type(dtype=torch.cfloat).to(device='cuda')
+xv = torch.from_numpy(xv).type(dtype=torch.cfloat).to(device="cuda")
+yv = torch.from_numpy(yv).type(dtype=torch.cfloat).to(device="cuda")
 rng = np.random.default_rng(20011204)
-psi = torch.from_numpy(smoothnoise(xv, yv, rng)).type(dtype=torch.cfloat).to(device='cuda')
+psi = (
+    torch.from_numpy(smoothnoise(xv, yv, rng))
+    .type(dtype=torch.cfloat)
+    .to(device="cuda")
+)
 
 with open(os.path.join(basedir, "parameters.json"), "w") as f:
     json.dump(params, f)
-nR = torch.zeros((1024, 1024), device='cuda', dtype=torch.cfloat)
-pump = torch.zeros((1024, 1024), device='cuda', dtype=torch.cfloat)
+nR = torch.zeros((1024, 1024), device="cuda", dtype=torch.cfloat)
+pump = torch.zeros((1024, 1024), device="cuda", dtype=torch.cfloat)
 points = filterByRadius(makeSunGrid(90.47414595449584, 4), 76)
-print(np.shape(points)) # verify that the right number of points are used
+print(np.shape(points))  # verify that the right number of points are used
 for p in points:
-    pump += 22.4 * tgauss(xv - p[0],
-                                    yv - p[1],
-                                    sigmax=1.27,
-                                    sigmay=1.27)
+    pump += 22.4 * tgauss(xv - p[0], yv - p[1], sigmax=1.27, sigmay=1.27)
 
 constpart = -0.1j + 0.04 * pump
 npolarsgpu = torch.zeros((8000), dtype=torch.float, device="cuda")
@@ -130,13 +133,18 @@ np.save(os.path.join(basedir, "npolars"), npolars)
 kpsidata = tfft.fftshift(tfft.fft2(psi)).detach().cpu().numpy()
 rpsidata = psi.detach().cpu().numpy()
 extentr = np.array([-120, 120, -120, 120])
-extentk = np.array([-13.40412865531645, 13.40412865531645, -13.40412865531645, 13.40412865531645])
-np.save(os.path.join(basedir, "psidata"),
-        {"kpsidata": kpsidata,
-         "rpsidata": rpsidata,
-         "extentr": extentr,
-         "extentk": extentk,
-         })
+extentk = np.array(
+    [-13.40412865531645, 13.40412865531645, -13.40412865531645, 13.40412865531645]
+)
+np.save(
+    os.path.join(basedir, "psidata"),
+    {
+        "kpsidata": kpsidata,
+        "rpsidata": rpsidata,
+        "extentr": extentr,
+        "extentk": extentk,
+    },
+)
 
 
 t2 = time.time()
