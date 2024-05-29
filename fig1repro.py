@@ -17,14 +17,16 @@ end = np.shape(psir)[0] - start
 extentr = [2 * x / 3 for x in extentr]
 fig, ax = plt.subplots(ncols=2)
 fig.set_size_inches(w=8, h=4)
-fig.subplots_adjust(left=0.1, bottom=0.1, top=0.95, right=0.9)
-cbar_ax = fig.add_axes((0.92, 0.15, 0.02, 0.75))
+# fig.subplots_adjust(left=0.1, bottom=0.1, top=0.95, right=0.9)
+# cbar_ax = fig.add_axes((0.92, 0.15, 0.02, 0.75))
+# cbar_ax = fig.add_axes((0.92, 0.15, 0.02, 0.75))
 im0 = ax[0].imshow(
     npnormSqr(psir[start:end, start:end]),
     origin="lower",
     interpolation="none",
     extent=extentr,
 )
+fig.colorbar(im0)
 points = filterByRadius(makeSunGrid(13.2 * goldenRatio**4, 4), 76)
 mask = [np.abs(np.arctan2(y, x)) < np.pi / 4.5 for x, y in points]
 points = points[mask]
@@ -52,6 +54,7 @@ ax[1].set_xlabel(r"$k_x$ [µ$m^{-1}$]")
 ax[1].set_ylabel(r"$k_y$ [µ$m^{-1}$]")
 ax[1].set_title(r"$|\psi_k|^2$")
 fig.suptitle("N=131")
-fig.colorbar(im1, cax=cbar_ax)
+fig.colorbar(im1)
 
+fig.tight_layout()
 fig.savefig(path)
