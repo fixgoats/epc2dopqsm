@@ -11,7 +11,7 @@ from src.penrose import filterByRadius, goldenRatio, makeSunGrid
 path = os.path.join("graphs", "fig1.pdf")
 Path("graphs").mkdir(parents=True, exist_ok=True)
 a = np.load(os.path.join("data", "fig1repro", "psidata.npy"), allow_pickle=True).item()
-psir = a["rpsidata"]
+psir = npnormSqr(a["rpsidata"])
 psir /= np.max(psir)
 extentr = a["extentr"]
 start = np.shape(psir)[0] // 6
@@ -23,7 +23,7 @@ fig.set_size_inches(w=8, h=4)
 # cbar_ax = fig.add_axes((0.92, 0.15, 0.02, 0.75))
 # cbar_ax = fig.add_axes((0.92, 0.15, 0.02, 0.75))
 im0 = ax[0].imshow(
-    npnormSqr(psir[start:end, start:end]),
+    psir[start:end, start:end],
     origin="lower",
     interpolation="none",
     extent=extentr,
@@ -39,14 +39,14 @@ ax[0].set_title(r"$|\psi_r|^2$")
 ax[0].set_xlabel(r"x [µm]")
 ax[0].set_ylabel(r"y [µm]")
 
-psik = a["kpsidata"]
+psik = npnormSqr(a["kpsidata"])
 psik /= np.max(psik)
 extentk = a["extentk"]
 startk = int(np.shape(psik)[0] / 2.5)
 endk = np.shape(psik)[0] - startk
 extentk = [x / 5 for x in extentk]
 im1 = ax[1].imshow(
-    npnormSqr(psik[startk:endk, startk:endk]),
+    psik[startk:endk, startk:endk],
     origin="lower",
     interpolation="none",
     extent=extentk,

@@ -5,3 +5,5 @@ data/*
 *.pdf
 *.pyc
 *__pycache__*
+fig*script.py
+checknpolars.py

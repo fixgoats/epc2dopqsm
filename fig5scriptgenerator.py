@@ -7,7 +7,7 @@ constV = -0.5j * gammalp
 alpha = 0.0004
 G = 0.002
 R = 0.016
-pumpStrength = 22.4  # 16 is ca. condensation threshold
+pumpStrength = 10.4  # 16 is ca. condensation threshold
 dt = 0.05
 Gamma = 0.1
 eta = 2
@@ -18,8 +18,8 @@ N = 1024
 startX = -120
 endX = 120
 dx = (endX - startX) / N
-prerun = 8000
-cutoff = 76.8965
+prerun = 12000
+cutoff = 70
 D = 13.5
 radius = D * goldenRatio**4
 kmax = np.pi / dx
@@ -80,18 +80,8 @@ def V(psi, nR, constPart):
 
 
 @torch.jit.script
-def halfRStepPsi(psi, nR, constPart):
-    return psi * torch.exp(-0.5j * {dt} * V(psi, nR, constPart))
-
-
-@torch.jit.script
-def halfStepNR(psi, nR, pump):
-    return (
-        math.exp(-0.5 * {dt} * {Gamma})
-        * torch.exp((-0.5 * {dt} * {R}) * tnormSqr(psi))
-        * nR
-        + pump * {dt} * 0.5
-    )
+def halfRTimeEvo(psi, nR, constPart):
+    return torch.exp(-0.5j * {dt} * V(psi, nR, constPart))
 
 
 @torch.jit.script
@@ -104,21 +94,13 @@ def stepNR(psi, nR, pump):
 
 @torch.jit.script
 def step(psi0, nR0, kTimeEvo, constPart, pump):
-    psi = halfRStepPsi(psi0, nR0, constPart)
-    psi = tfft.ifft2(kTimeEvo * tfft.fft2(psi0))
-    nR = halfStepNR(psi, nR0, pump)
-    psi = halfRStepPsi(psi, nR, constPart)
-    nR = halfStepNR(psi, nR, pump)
-    return psi, nR
-
-
-@torch.jit.script
-def altstep(psi0, nR0, kTimeEvo, constPart, pump):
-    psi = halfRStepPsi(psi0, nR0, constPart)
-    psi = tfft.ifft2(kTimeEvo * tfft.fft2(psi0))
-    psi = halfRStepPsi(psi, nR0, constPart)
+    rProp = halfRTimeEvo(psi0, nR0, constPart)
+    psi = rProp * psi0
+    psi = tfft.ifft2(kTimeEvo * tfft.fft2(psi))
+    psi = rProp * psi
     nR = stepNR(psi, nR0, pump)
     return psi, nR
+
 
 
 @torch.jit.script

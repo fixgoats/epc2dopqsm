@@ -38,8 +38,8 @@ def smoothnoise(xv, yv, rng=None):
 
 
 def gauss(x, y, sigmax=1.0, sigmay=1.0):
-    return np.exp(-((x / sigmax) ** 2) - (y / sigmay) ** 2)
+    return np.exp(0.5 * (-((x / sigmax) ** 2) - (y / sigmay) ** 2))
 
 
 def tgauss(x, y, sigmax=1.0, sigmay=1.0):
-    return torch.exp(-((x / sigmax) ** 2) - (y / sigmay) ** 2)
+    return torch.exp(0.5 * (-((x / sigmax) ** 2) - (y / sigmay) ** 2))

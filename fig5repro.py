@@ -23,18 +23,18 @@ for s in sets:
 
 ims = {}
 for i, s in enumerate(sets):
-    tmpr = data[s]["rpsidata"]
+    tmpr = npnormSqr(data[s]["rpsidata"])
     tmpr /= np.max(tmpr)
     startr = np.shape(tmpr)[0] // 6
     endr = np.shape(tmpr)[0] - startr
-    tmpk = data[s]["kpsidata"]
+    tmpk = npnormSqr(data[s]["kpsidata"])
     tmpk /= np.max(tmpk)
     startk = int(np.shape(tmpk)[0] / 2.5)
     endk = np.shape(tmpr)[0] - startk
     extentr = [2 * x / 3 for x in data[s]["extentr"]]
     extentk = [x / 5 for x in data[s]["extentk"]]
     ims[s + "r"] = ax[0, i].imshow(
-        npnormSqr(tmpr[startr:endr, startr:endr]),
+        tmpr[startr:endr, startr:endr],
         aspect="equal",
         origin="lower",
         interpolation="none",
@@ -44,7 +44,7 @@ for i, s in enumerate(sets):
     )
     ax[0, i].set_title(f"$|\\psi_r|^2$, D={s}")
     ims[s + "k"] = ax[1, i].imshow(
-        npnormSqr(tmpk[startk:endk, startk:endk]),
+        tmpk[startk:endk, startk:endk],
         aspect="equal",
         origin="lower",
         interpolation="none",

@@ -24,18 +24,18 @@ for n in defects:
 
 ims = {0: {}, 5: {}, 21: {}}
 for i, n in enumerate(defects):
-    tmpr = data[n]["rpsidata"]
+    tmpr = npnormSqr(data[n]["rpsidata"])
     tmpr /= np.max(tmpr)
     startr = np.shape(tmpr)[0] // 6
     endr = np.shape(tmpr)[0] - startr
-    tmpk = data[n]["kpsidata"]
+    tmpk = npnormSqr(data[n]["kpsidata"])
     tmpk /= np.max(tmpk)
     startk = int(np.shape(tmpk)[0] / 2.5)
     endk = np.shape(tmpr)[0] - startk
     extentr = [2 * x / 3 for x in data[n]["extentr"]]
     extentk = [x / 5 for x in data[n]["extentk"]]
     ims[n]["r"] = ax[0, i].imshow(
-        npnormSqr(tmpr[startr:endr, startr:endr]),
+        tmpr[startr:endr, startr:endr],
         aspect="equal",
         origin="lower",
         interpolation="none",
@@ -47,7 +47,7 @@ for i, n in enumerate(defects):
     ax[0, i].scatter(defs[:, 0], defs[:, 1], s=9, c="black", linewidths=0.0)
     ax[0, i].scatter(defs[:, 0], defs[:, 1], s=6, c="orange", linewidths=0.0)
     ims[n]["k"] = ax[1, i].imshow(
-        npnormSqr(tmpk[startk:endk, startk:endk]),
+        tmpk[startk:endk, startk:endk],
         aspect="equal",
         origin="lower",
         interpolation="none",

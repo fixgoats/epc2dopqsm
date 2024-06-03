@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.colors import LogNorm
 
+from src.common import npnormSqr
+
 fig, ax = plt.subplots(nrows=2, ncols=4, gridspec_kw={"wspace": 0.00, "hspace": 0.15})
 fig.set_size_inches(w=11, h=6)
 fig.subplots_adjust(left=0.05, bottom=0.05, top=0.95, right=0.92)
@@ -20,11 +22,11 @@ for s in sets:
 
 ims = {}
 for i, s in enumerate(sets):
-    tmpr = data[s]["rpsidata"]
+    tmpr = npnormSqr(data[s]["rpsidata"])
     tmpr /= np.max(tmpr)
     startr = np.shape(tmpr)[0] // 6
     endr = np.shape(tmpr)[0] - startr
-    tmpk = data[s]["kpsidata"]
+    tmpk = npnormSqr(data[s]["kpsidata"])
     tmpk /= np.max(tmpk)
     startk = int(np.shape(tmpk)[0] / 2.5)
     endk = np.shape(tmpr)[0] - startk
